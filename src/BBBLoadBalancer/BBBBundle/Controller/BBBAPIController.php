@@ -258,7 +258,45 @@ class BBBAPIController extends Controller
      */
     public function getRecordingsAction(Request $request)
     {
-        // @TODO : not yet supported
+        $servers = $this->get('server')->getServersBy(array('enabled' => true));
+        $recordings_xml = "";
+        foreach($servers as $server){
+            $recordings_url = $server->getUrl() . $this->get('bbb')->cleanUri($request->getRequestUri());
+            $return = $this->get('bbb')->doRequest($recordings_url);
+
+            if(!$return){
+                $this->get('logger')->error("Server did not respond.", array("Server_id" => $servers->getId(), "Server URL" => $server->getUrl()));
+            } else {
+                $xml = new \SimpleXMLElement($return);
+                if(!empty($xml->recordings)){
+                    foreach($xml->recordings as $recording){
+                        $recordings_xml .= $recording->recording->asXML();
+                    }
+                }
+            }
+        }
+
+        if(empty($recordings_xml)){
+            $response = new Response("
+                <response>
+                    <returncode>SUCCESS</returncode>
+                    <recordings/>
+                    <messageKey>noRecordings</messageKey>
+                    <message>no recordings were found</message>
+                </response>");
+            $response->headers->set('Content-Type', 'text/xml');
+
+            return $response;
+        }
+
+        $response = new Response("
+            <response>
+                <returncode>SUCCESS</returncode>
+                <recordings>" . $recordings_xml . "</recordings>
+            </response>");
+        $response->headers->set('Content-Type', 'text/xml');
+
+        return $response;
     }
 
     /**
