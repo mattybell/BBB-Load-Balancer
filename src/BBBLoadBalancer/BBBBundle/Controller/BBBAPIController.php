@@ -48,7 +48,7 @@ class BBBAPIController extends Controller
 
         $meetingID = $request->get('meetingID');
         $meeting = $this->get('meeting')->getMeetingBy(array('meetingId' => $meetingID));
-
+        
         $save = false;
 
         if($meeting){
@@ -60,7 +60,7 @@ class BBBAPIController extends Controller
         }
 
         $return = $this->get('bbb')->doRequest($server->getUrl() . $this->get('bbb')->cleanUri($request->getRequestUri()));
-
+       
         if(!$return){
             return $this->errorResponse($server);
         }
@@ -290,12 +290,12 @@ class BBBAPIController extends Controller
             return $response;
         }
 
-        foreach($xml->recordings as $recording){
-            $recordID  = $recording->recording->recordID->__toString();
+        foreach($xml->recordings->recording as $recordingData){
+            $recordID  = $recordingData->recordID->__toString();
             $recording = $this->get('recording')->getRecordingById(array('recordingId' => $recordID));
-            if ($recording) {
+            if (!$recording) {
                 $recording = $this->get('recording')->newRecording();
-                $meetingID  = $recording->recording->meetingID->__toString();
+                $meetingID  = $recordingData->meetingID->__toString();
                 $meeting = $this->get('meeting')->getMeetingBy(array('meetingId' => $meetingID));
                 if($meeting){
                     $server = $meeting->getServer();

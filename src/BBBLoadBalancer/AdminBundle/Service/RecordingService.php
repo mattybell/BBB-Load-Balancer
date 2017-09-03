@@ -48,7 +48,7 @@ class RecordingService
      * Get recording by id
      */
     public function getRecordingById($args, $orders = array(), $limit = null, $skip = null){
-        return $this->dm->getRepository('BBBLoadBalancerAdminBundle:Recording')->findBy($args, $orders, $limit, $skip);
+        return $this->dm->getRepository('BBBLoadBalancerAdminBundle:Recording')->findOneBy($args, $orders, $limit, $skip);
     }
 
     /**
