@@ -5,3 +5,6 @@ services:
     server:
         class: BBBLoadBalancer\AdminBundle\Service\ServerService
         arguments: [ @doctrine_mongodb, @bbb, @validator, @meeting, @logger ]
+    recording:
+        class: BBBLoadBalancer\AdminBundle\Service\RecordingService
+        arguments: [ @doctrine_mongodb, @validator ]

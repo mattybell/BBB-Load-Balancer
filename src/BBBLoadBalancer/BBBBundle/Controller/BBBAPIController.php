@@ -217,8 +217,8 @@ class BBBAPIController extends Controller
 
             if(!$return){
                 $this->get('logger')->error("Server did not respond.", array("Server_id" => $server->getId(), "Server URL" => $server->getUrl()));
-            }
-            else {
+
+            } else {
                 $xml = new \SimpleXMLElement($return);
                 if(!empty($xml->meetings)){
                     foreach($xml->meetings as $meeting){
@@ -261,6 +261,7 @@ class BBBAPIController extends Controller
         $servers = $this->get('server')->getServersBy(array('enabled' => true));
         $recordings_xml = "";
         foreach($servers as $server){
+            
             $recordings_url = $server->getUrl() . $this->get('bbb')->cleanUri($request->getRequestUri());
             $return = $this->get('bbb')->doRequest($recordings_url);
 
@@ -279,7 +280,7 @@ class BBBAPIController extends Controller
         if(empty($recordings_xml)){
             $response = new Response("
                 <response>
-                    <returncode>SUCCESS</returncode>
+                    <returncode>FAILED</returncode>
                     <recordings/>
                     <messageKey>noRecordings</messageKey>
                     <message>no recordings were found</message>
@@ -287,6 +288,23 @@ class BBBAPIController extends Controller
             $response->headers->set('Content-Type', 'text/xml');
 
             return $response;
+        }
+
+        foreach($xml->recordings as $recording){
+            $recordID  = $recording->recording->recordID->__toString();
+            $recording = $this->get('recording')->getRecordingById(array('recordingId' => $recordID));
+            if ($recording) {
+                $recording = $this->get('recording')->newRecording();
+                $meetingID  = $recording->recording->meetingID->__toString();
+                $meeting = $this->get('meeting')->getMeetingBy(array('meetingId' => $meetingID));
+                if($meeting){
+                    $server = $meeting->getServer();
+                    $recording->setMeeting($meeting);
+                    $recording->setDeleted(false);
+                    $recording->setServer($server);
+                    $this->get('recording')->saveRecording($recording);
+                }
+            }
         }
 
         $response = new Response("
@@ -305,7 +323,54 @@ class BBBAPIController extends Controller
      */
     public function publishRecordingsAction(Request $request)
     {
-        // @TODO : not yet supported
+        $recordID  = $request->get('recordID');
+        $publish   = $request->get('publish');
+
+        if (empty($publish)) {
+            $response = new Response("
+                <response>
+                    <returncode>FAILED</returncode>
+                    <recordings/>
+                    <messageKey>noPublish</messageKey>
+                    <message>no publish were found</message>
+                </response>");
+            $response->headers->set('Content-Type', 'text/xml');
+
+            return $response;
+        }
+
+        $recording = $this->get('recording')->getRecordingById(array('recordID' => $recordID));
+        if(!$recording){
+            return $this->errorRecording($recordID);
+        }
+
+        if ($recording->getMeeting()) {
+            $meeting = $recording->getMeeting();
+            $server  = $meeting->getServer();
+            $endUrl  = $server->getUrl() . $this->get('bbb')->cleanUri($request->getRequestUri());
+            $return  = $this->get('bbb')->doRequest($endUrl);
+
+            if(!$return){
+                return $this->errorResponse($server);
+            }
+
+            $this->get('logger')->info(
+                "Publishing Recordings.",
+                array(
+                    "Server ID"        => $server->getId(),
+                    "Server URL"       => $server->getUrl(),
+                    "Recording ID"     => $recording->getId(),
+                    "BBB recording ID" => $recording->getRecordingId()
+                )
+            );
+
+            $response = new Response($return);
+            $response->headers->set('Content-Type', 'text/xml');
+
+            return $response;
+        } else {
+            return $this->errorRecording($recordID);
+        }
     }
 
     /**
@@ -314,7 +379,40 @@ class BBBAPIController extends Controller
      */
     public function deleteRecordingsAction(Request $request)
     {
-        // @TODO : not yet supported
+        $recordID  = $request->get('recordID');
+        $recording = $this->get('recording')->getRecordingById(array('recordID' => $recordID));
+        if(!$recording){
+            return $this->errorRecording($recordID);
+        }
+
+        if ($recording->getMeeting()) {
+            $meeting = $recording->getMeeting();
+            $server  = $meeting->getServer();
+            $endUrl  = $server->getUrl() . $this->get('bbb')->cleanUri($request->getRequestUri());
+            $return  = $this->get('bbb')->doRequest($endUrl);
+
+            if(!$return){
+                return $this->errorResponse($server);
+            }
+
+            $this->get('logger')->info(
+                "Deleting Recordings.",
+                array(
+                    "Server ID"        => $server->getId(),
+                    "Server URL"       => $server->getUrl(),
+                    "Recording ID"     => $recording->getId(),
+                    "BBB recording ID" => $recording->getRecordingId()
+                )
+            );
+            $this->get('recording')->removeRecording($recording);
+
+            $response = new Response($return);
+            $response->headers->set('Content-Type', 'text/xml');
+
+            return $response;
+        } else {
+            return $this->errorRecording($recordID);
+        }
     }
 
     /**
@@ -364,6 +462,22 @@ class BBBAPIController extends Controller
                 <returncode>FAILED</returncode>
                 <messageKey>meetingIdError</messageKey>
                 <message>could not found meeting</message>
+            </response>");
+        $response->headers->set('Content-Type', 'text/xml');
+        return $response;
+    }
+
+    /**
+     * return error response
+     */
+    private function errorRecording($recordingId){
+        $this->get('logger')->error("Recording ID was not found.", array("Recording ID" => $recordingId));
+
+        $response = new Response("
+            <response>
+                <returncode>FAILED</returncode>
+                <messageKey>recordingIdError</messageKey>
+                <message>could not found recording</message>
             </response>");
         $response->headers->set('Content-Type', 'text/xml');
         return $response;
