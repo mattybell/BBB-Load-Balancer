@@ -266,7 +266,7 @@ class BBBAPIController extends Controller
             $return = $this->get('bbb')->doRequest($recordings_url);
 
             if(!$return){
-                $this->get('logger')->error("Server did not respond.", array("Server_id" => $servers->getId(), "Server URL" => $server->getUrl()));
+                $this->get('logger')->error("Server did not respond.", array("Server_id" => $server->getId(), "Server URL" => $server->getUrl()));
             } else {
                 $xml = new \SimpleXMLElement($return);
                 if(!empty($xml->recordings)){
@@ -292,15 +292,17 @@ class BBBAPIController extends Controller
 
         foreach($xml->recordings->recording as $recordingData){
             $recordID  = $recordingData->recordID->__toString();
-            $recording = $this->get('recording')->getRecordingById(array('recordingId' => $recordID));
-            if (!$recording) {
+            $recordingObj = $this->get('recording')->getRecordingById(array('recordingId' => $recordID));
+            if (!$recordingObj) {
                 $recording = $this->get('recording')->newRecording();
                 $meetingID  = $recordingData->meetingID->__toString();
                 $meeting = $this->get('meeting')->getMeetingBy(array('meetingId' => $meetingID));
                 if($meeting){
+                    
                     $server = $meeting->getServer();
                     $recording->setMeeting($meeting);
                     $recording->setDeleted(false);
+                    $recording->setRecordingId($recordingData->recordID->__toString());
                     $recording->setServer($server);
                     $this->get('recording')->saveRecording($recording);
                 }
@@ -339,7 +341,7 @@ class BBBAPIController extends Controller
             return $response;
         }
 
-        $recording = $this->get('recording')->getRecordingById(array('recordID' => $recordID));
+        $recording = $this->get('recording')->getRecordingById(array('recordingId' => $recordID));
         if(!$recording){
             return $this->errorRecording($recordID);
         }
@@ -380,7 +382,7 @@ class BBBAPIController extends Controller
     public function deleteRecordingsAction(Request $request)
     {
         $recordID  = $request->get('recordID');
-        $recording = $this->get('recording')->getRecordingById(array('recordID' => $recordID));
+        $recording = $this->get('recording')->getRecordingById(array('recordingId' => $recordID));
         if(!$recording){
             return $this->errorRecording($recordID);
         }
