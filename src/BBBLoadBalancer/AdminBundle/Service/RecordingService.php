@@ -62,4 +62,13 @@ class RecordingService
         $this->dm->persist($recording);
         $this->dm->flush();
     }
+
+    public function publishRecording($recording){
+        if (!$recording) {
+            throw new NotFoundHttpException();
+        }
+        $recording->setPublish('true');
+        $this->dm->persist($recording);
+        $this->dm->flush();
+    }
 }

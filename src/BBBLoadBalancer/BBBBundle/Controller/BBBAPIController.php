@@ -302,6 +302,7 @@ class BBBAPIController extends Controller
                     $server = $meeting->getServer();
                     $recording->setMeeting($meeting);
                     $recording->setDeleted(false);
+                    $recording->setPublish($recordingData->published->__toString());
                     $recording->setRecordingId($recordingData->recordID->__toString());
                     $recording->setServer($server);
                     $this->get('recording')->saveRecording($recording);
@@ -349,6 +350,7 @@ class BBBAPIController extends Controller
         if ($recording->getMeeting()) {
             $meeting = $recording->getMeeting();
             $server  = $meeting->getServer();
+
             $endUrl  = $server->getUrl() . $this->get('bbb')->cleanUri($request->getRequestUri());
             $return  = $this->get('bbb')->doRequest($endUrl);
 
@@ -356,6 +358,7 @@ class BBBAPIController extends Controller
                 return $this->errorResponse($server);
             }
 
+            
             $this->get('logger')->info(
                 "Publishing Recordings.",
                 array(
@@ -365,6 +368,8 @@ class BBBAPIController extends Controller
                     "BBB recording ID" => $recording->getRecordingId()
                 )
             );
+
+            $this->get('recording')->publishRecording($recording);
 
             $response = new Response($return);
             $response->headers->set('Content-Type', 'text/xml');

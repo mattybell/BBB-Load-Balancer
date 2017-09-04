@@ -44,6 +44,12 @@ class Recording
     protected $deleted;
 
     /**
+     * @MongoDB\String
+     * @Assert\NotBlank(message = "Not Found Publish")
+     */
+    protected $publish;
+
+    /**
      * Get id
      *
      * @return id $id
@@ -139,5 +145,27 @@ class Recording
     public function getServer()
     {
         return $this->server;
+    }
+
+    /**
+     * Set publish
+     *
+     * @param string $publish
+     * @return self
+     */
+    public function setPublish($publish)
+    {
+        $this->publish = $publish;
+        return $this;
+    }
+
+    /**
+     * Get publish
+     *
+     * @return string $publish
+     */
+    public function getPublish()
+    {
+        return $this->publish;
     }
 }
