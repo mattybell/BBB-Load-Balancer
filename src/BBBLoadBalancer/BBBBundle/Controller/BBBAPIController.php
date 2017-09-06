@@ -423,12 +423,30 @@ class BBBAPIController extends Controller
     }
 
     /**
-     * @Route("/bigbluebutton/api/getDefaultConfigXML.xml", defaults={"_format": "xml"})
+     * @Route("/bigbluebutton/api/getDefaultConfigXML", defaults={"_format": "xml"})
      * @Method({"GET"})
      */
     public function getDefaultConfigXMLAction(Request $request)
     {
-        // @TODO : not yet supported
+        $meetingID = $request->get('meetingID');
+        $meeting = $this->get('meeting')->getMeetingBy(array('meetingId' => $meetingID));
+        if(!$meeting){
+            return $this->errorMeeting($meetingID);
+        }
+
+        $server = $meeting->getServer();
+        
+        $info_url = $server->getUrl() . $this->get('bbb')->cleanUri($request->getRequestUri());
+        $return = $this->get('bbb')->doRequest($info_url);
+
+        if(!$return){
+            return $this->errorResponse($server);
+        }
+
+        $response = new Response($return);
+        $response->headers->set('Content-Type', 'text/xml');
+
+        return $response;
     }
 
     /**
